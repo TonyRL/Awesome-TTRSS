@@ -1,17 +1,17 @@
-FROM docker.io/alpine:3.21 AS builder
+FROM docker.io/alpine:3.22 AS builder
 
 # Download ttrss via git
 WORKDIR /var/www
 # https://stackoverflow.com/questions/36996046/how-to-prevent-dockerfile-caching-git-clone
-ADD https://gitlab.tt-rss.org/api/v4/projects/20/repository/branches/master /var/www/ttrss-version
+ADD https://api.github.com/repos/tt-rss/tt-rss/git/refs/heads/main /var/www/ttrss-version
 RUN apk add --update tar curl git \
   && rm -rf /var/www/* \
-  && git clone https://git.tt-rss.org/fox/tt-rss --depth=1 /var/www
+  && git clone https://github.com/tt-rss/tt-rss --depth=1 /var/www
 
 # Download plugins
 WORKDIR /var/www/plugins.local
 
-RUN mkdir /var/www/plugins/fever mercury_fulltext feediron opencc api_newsplus options_per_feed remove_iframe_sandbox wallabag_v2 auth_oidc freshapi && \
+RUN mkdir /var/www/plugins/fever mercury_fulltext feediron opencc api_newsplus options_per_feed remove_iframe_sandbox wallabag_v2 auth_oidc freshapi api_feedreader && \
   ## Fever
   curl -sL https://github.com/DigitalDJ/tinytinyrss-fever-plugin/archive/master.tar.gz | \
   tar xzvpf - --strip-components=1 -C /var/www/plugins/fever tinytinyrss-fever-plugin-master && \
@@ -28,7 +28,7 @@ RUN mkdir /var/www/plugins/fever mercury_fulltext feediron opencc api_newsplus o
   curl -sL https://github.com/voidstern/tt-rss-newsplus-plugin/archive/master.tar.gz | \
   tar xzvpf - --strip-components=2 -C api_newsplus tt-rss-newsplus-plugin-master/api_newsplus && \
   ## Options per feed
-  curl -sL https://github.com/sergey-dryabzhinsky/options_per_feed/archive/master.tar.gz | \
+  curl -sL https://github.com/entekadesign/options_per_feed/archive/master.tar.gz | \
   tar xzvpf - --strip-components=1 -C options_per_feed options_per_feed-master && \
   ## Remove iframe sandbox
   curl -sL https://github.com/DIYgod/ttrss-plugin-remove-iframe-sandbox/archive/master.tar.gz | \
@@ -37,14 +37,13 @@ RUN mkdir /var/www/plugins/fever mercury_fulltext feediron opencc api_newsplus o
   curl -sL https://github.com/joshp23/ttrss-to-wallabag-v2/archive/master.tar.gz | \
   tar xzvpf - --strip-components=2 -C wallabag_v2 ttrss-to-wallabag-v2-master/wallabag_v2 && \
   ## Auth OIDC
-  curl -sL https://gitlab.tt-rss.org/tt-rss/plugins/ttrss-auth-oidc/-/archive/master/ttrss-auth-oidc-master.tar.gz | \
-  tar xzvpf - --strip-components=1 -C auth_oidc ttrss-auth-oidc-master && \
+  curl -sL https://github.com/tt-rss/tt-rss-plugin-auth-oidc/archive/main.tar.gz | \
+  tar xzvpf - --strip-components=1 -C auth_oidc tt-rss-plugin-auth-oidc-main && \
   ## FreshAPI
   curl -sL https://github.com/eric-pierce/freshapi/archive/master.tar.gz | \
-  tar xzvpf - --strip-components=1 -C freshapi freshapi-master
-
-## FeedReader API
-ADD https://raw.githubusercontent.com/jangernert/FeedReader/master/data/tt-rss-feedreader-plugin/api_feedreader/init.php api_feedreader/
+  tar xzvpf - --strip-components=1 -C freshapi freshapi-master && \
+  ## FeedReader API
+  curl -sL https://raw.githubusercontent.com/jangernert/FeedReader/master/data/tt-rss-feedreader-plugin/api_feedreader/init.php -o api_feedreader/init.php
 
 # Download themes
 WORKDIR /var/www/themes.local
@@ -55,7 +54,7 @@ WORKDIR /var/www/themes.local
 # COPY src/local-overrides.js local-overrides.js
 # this polyfill is added to tt-rss after 1 years 7 months
 # https://github.com/HenryQW/Awesome-TTRSS/commit/1b077f26f8c40ce7dd7b2a0cf2263a3537118e07
-# https://gitlab.tt-rss.org/tt-rss/tt-rss/-/commit/31ef788e02339452fa6241277e17f85067c33ba0
+# https://github.com/tt-rss/tt-rss/commit/31ef788e02339452fa6241277e17f85067c33ba0
 
 ## Feedly
 RUN curl -sL https://github.com/levito/tt-rss-feedly-theme/archive/master.tar.gz | \
@@ -67,7 +66,7 @@ RUN curl -sL https://github.com/levito/tt-rss-feedly-theme/archive/master.tar.gz
   curl -sL https://github.com/Gravemind/tt-rss-feedlish-theme/archive/master.tar.gz | \
   tar xzvpf - --strip-components=1 --wildcards -C . tt-rss-feedlish-theme-master/feedlish*.css
 
-FROM docker.io/alpine:3.21
+FROM docker.io/alpine:3.22
 
 LABEL maintainer="Henry<hi@henry.wang>"
 
@@ -107,7 +106,9 @@ ENV LD_PRELOAD="/usr/lib/preloadable_libiconv.so php"
 COPY --from=builder /var/www /var/www
 
 RUN chown nobody:nginx -R /var/www \
-  && git config --global --add safe.directory /var/www
+  && git config --global --add safe.directory /var/www \
+  # https://github.com/tt-rss/tt-rss/commit/f57bb8ec244c39615d4ab247a7016aded11080a2
+  && chown -R nobody:nginx /root
 
 EXPOSE 80
 
@@ -115,8 +116,9 @@ EXPOSE 80
 ENV DB_HOST=database.postgres
 ENV DB_PORT=5432
 ENV DB_USER=postgres
-ENV DB_PASS=ttrss
 ENV DB_NAME=ttrss
+ENV DB_PASS=ttrss
+ENV DB_SSLMODE=prefer
 
 # Some default settings
 ENV SELF_URL_PATH=http://localhost:181

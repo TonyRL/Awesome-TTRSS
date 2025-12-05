@@ -6,7 +6,9 @@ WORKDIR /var/www
 ADD https://api.github.com/repos/tt-rss/tt-rss/git/refs/heads/main /var/www/ttrss-version
 RUN apk add --update tar curl git \
   && rm -rf /var/www/* \
-  && git clone https://github.com/tt-rss/tt-rss --depth=1 /var/www
+  && git clone https://github.com/tt-rss/tt-rss --depth=1 /var/www \
+  && rm -rf /var/www/tests \
+  && find /var/www -mindepth 1 -maxdepth 1 -name ".*" ! -name ".git" -exec rm -rf {} +
 
 # Download plugins
 WORKDIR /var/www/plugins.local
@@ -70,47 +72,6 @@ FROM docker.io/alpine:3.22
 
 LABEL maintainer="Henry<hi@henry.wang>"
 
-WORKDIR /var/www
-
-COPY ./docker-entrypoint.sh /docker-entrypoint.sh
-COPY src/wait-for.sh /wait-for.sh
-COPY src/ttrss.nginx.conf /etc/nginx/nginx.conf
-COPY src/initialize.php /initialize.php
-COPY src/s6/ /etc/s6/
-
-# Open up ports to bypass ttrss strict port checks, USE WITH CAUTION
-ENV ALLOW_PORTS="80,443"
-ENV SELF_URL_PATH=http://localhost:181
-ENV DB_NAME=ttrss
-ENV DB_USER=ttrss
-ENV DB_PASS=ttrss
-
-# Install dependencies
-RUN chmod -x /wait-for.sh && chmod -x /docker-entrypoint.sh && apk add --update --no-cache git nginx s6 curl sudo tzdata \
-  php83 php83-fpm php83-ctype php83-curl php83-dom php83-exif php83-fileinfo php83-gd php83-iconv php83-intl php83-json php83-mbstring php83-opcache \
-  php83-openssl php83-pcntl php83-pdo php83-pdo_pgsql php83-phar php83-pecl-apcu php83-posix php83-session php83-simplexml php83-sockets php83-sodium php83-tokenizer php83-xml php83-xmlwriter php83-zip \
-  # fork only deps
-  php83-gmp php83-pecl-imagick \
-  ca-certificates && rm -rf /var/cache/apk/* \
-  # Update libiconv as the default version is too low
-  # Do not bump this dependency https://gitlab.alpinelinux.org/alpine/aports/-/issues/12328
-  && apk add gnu-libiconv=1.15-r3 --update --no-cache --repository http://dl-cdn.alpinelinux.org/alpine/v3.13/community/ \
-  && rm -rf /var/www \
-  # fork only changes
-  && echo -e "opcache.enable_cli=1\nopcache.jit=1255\nopcache.jit_buffer_size=64M" >> /etc/php83/php.ini
-
-ENV LD_PRELOAD="/usr/lib/preloadable_libiconv.so php"
-
-# Copy TTRSS and plugins
-COPY --from=builder /var/www /var/www
-
-RUN chown nobody:nginx -R /var/www \
-  && git config --global --add safe.directory /var/www \
-  # https://github.com/tt-rss/tt-rss/commit/f57bb8ec244c39615d4ab247a7016aded11080a2
-  && chown -R nobody:nginx /root
-
-EXPOSE 80
-
 # Database default settings
 ENV DB_HOST=database.postgres
 ENV DB_PORT=5432
@@ -126,5 +87,50 @@ ENV SESSION_COOKIE_LIFETIME=24
 ENV SINGLE_USER_MODE=false
 ENV LOG_DESTINATION=sql
 ENV FEED_LOG_QUIET=false
+
+# Open up ports to bypass ttrss strict port checks, USE WITH CAUTION
+ENV ALLOW_PORTS="80,443"
+
+ENV PHP_SUFFIX=83
+
+WORKDIR /var/www
+
+COPY ./docker-entrypoint.sh /docker-entrypoint.sh
+COPY src/wait-for.sh /wait-for.sh
+COPY src/ttrss.nginx.conf /etc/nginx/nginx.conf
+COPY src/initialize.php /initialize.php
+COPY src/s6/ /etc/s6/
+
+# Install dependencies
+RUN set -ex \
+  && chmod -x /wait-for.sh && chmod -x /docker-entrypoint.sh \
+  && PHP_PACKAGES="fpm ctype curl dom exif fileinfo gd iconv intl json mbstring opcache \
+  openssl pcntl pdo pdo_pgsql pecl-apcu phar posix session simplexml sockets sodium tokenizer xml xmlwriter zip \
+  gmp pecl-imagick" \
+  && EXT_LIST="" \
+  && for p in $PHP_PACKAGES; do \
+       EXT_LIST="$EXT_LIST php${PHP_SUFFIX}-$p"; \
+     done \
+  && apk add --update --no-cache git nginx s6 curl sudo tzdata \
+  php${PHP_SUFFIX} $EXT_LIST \
+  ca-certificates && rm -rf /var/cache/apk/* \
+  # Update libiconv as the default version is too low
+  # Do not bump this dependency https://gitlab.alpinelinux.org/alpine/aports/-/issues/12328
+  && apk add gnu-libiconv=1.15-r3 --update --no-cache --repository http://dl-cdn.alpinelinux.org/alpine/v3.13/community/ \
+  && echo -e "opcache.enable_cli=1\nopcache.jit=1255\nopcache.jit_buffer_size=64M" >> /etc/php${PHP_SUFFIX}/php.ini \
+  # leftover files
+  && rm -rf /var/www
+
+ENV LD_PRELOAD="/usr/lib/preloadable_libiconv.so php"
+
+# Copy TTRSS and plugins
+COPY --from=builder /var/www /var/www
+
+RUN chown nobody:nginx -R /var/www \
+  && git config --global --add safe.directory /var/www \
+  # https://github.com/tt-rss/tt-rss/commit/f57bb8ec244c39615d4ab247a7016aded11080a2
+  && chown -R nobody:nginx /root
+
+EXPOSE 80
 
 ENTRYPOINT ["sh", "/docker-entrypoint.sh"]

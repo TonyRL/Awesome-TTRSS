@@ -45,7 +45,7 @@ docker run -it --name ttrss --restart=always \
 1. Download [docker-compose.yml](https://github.com/HenryQW/Awesome-TTRSS/blob/main/docker-compose.yml) to any directory.
 2. Read `docker-compose.yml` and change the settings (please ensure you have changed the password for postgres).
 3. Run `docker compose up -d` and wait for the deployment to finish.
-4. Access ttrss via port 181, with default credentials `admin` and `password`, please change them asap.
+4. Access TTRSS via port 181, with default credentials `admin` and `password`, please change them asap.
 5. `wangqiru/mercury-parser-api` and `wangqiru/opencc-api-server` are optional service containers to support additional features, removing them will not affect TTRSS's basic functionalities.
 
 ### Supported Environment Variables
@@ -149,7 +149,7 @@ docker compose up -d # If you didn't use docker compose, I'm sure you know what 
 
 ### Auto Update
 
-The example [Docker Compose](#deployment-via-docker-compose) includes [Watchtower](https://github.com/containrrr/watchtower), which automatically pulls all containers included in Awesome TTRSS (and other containers running on your system) and refreshes your running services. By default, it's disabled, **make sure it will not affect your other service containers before enabling this.**
+The example [Docker Compose](#deployment-via-docker-compose) includes [Watchtower](https://github.com/nicholas-fedor/watchtower), which automatically pulls all containers included in Awesome TTRSS (and other containers running on your system) and refreshes your running services. By default, it's disabled, **make sure it will not affect your other service containers before enabling this.**
 
 To exclude images, check the following for disabling auto update for containers:
 

@@ -1,4 +1,4 @@
-FROM docker.io/alpine:3.22 AS builder
+FROM docker.io/alpine:3.23 AS builder
 
 # Download ttrss via git
 WORKDIR /var/www
@@ -68,7 +68,7 @@ RUN curl -sL https://github.com/levito/tt-rss-feedly-theme/archive/master.tar.gz
   curl -sL https://github.com/Gravemind/tt-rss-feedlish-theme/archive/master.tar.gz | \
   tar xzvpf - --strip-components=1 --wildcards -C . tt-rss-feedlish-theme-master/feedlish*.css
 
-FROM docker.io/alpine:3.22
+FROM docker.io/alpine:3.23
 
 LABEL maintainer="Henry<hi@henry.wang>"
 
@@ -117,6 +117,7 @@ RUN set -ex \
   # Update libiconv as the default version is too low
   # Do not bump this dependency https://gitlab.alpinelinux.org/alpine/aports/-/issues/12328
   && apk add gnu-libiconv=1.15-r3 --update --no-cache --repository http://dl-cdn.alpinelinux.org/alpine/v3.13/community/ \
+  && if [ ! -e /usr/bin/php ]; then ln -s /usr/bin/php${PHP_SUFFIX} /usr/bin/php; fi \
   && echo -e "opcache.enable_cli=1\nopcache.jit=1255\nopcache.jit_buffer_size=64M" >> /etc/php${PHP_SUFFIX}/php.ini \
   # leftover files
   && rm -rf /var/www

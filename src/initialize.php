@@ -99,6 +99,20 @@ $config['CACHE_S3_BUCKET'] = env('CACHE_S3_BUCKET');
 $config['CACHE_S3_REGION'] = env('CACHE_S3_REGION');
 $config['CACHE_S3_ACCESS_KEY'] = env('CACHE_S3_ACCESS_KEY');
 $config['CACHE_S3_SECRET_KEY'] = env('CACHE_S3_SECRET_KEY');
+// ttrss-redis-cache https://github.com/TonyRL/tt-rss-plugin-redis-cache
+$config['REDIS_URL'] = env('REDIS_URL');
+$config['REDIS_HOST'] = env('REDIS_HOST');
+$config['REDIS_PORT'] = env('REDIS_PORT');
+$config['REDIS_DB'] = env('REDIS_DB');
+$config['REDIS_PASSWORD'] = env('REDIS_PASSWORD');
+$config['REDIS_COUNTERS_TTL'] = env('REDIS_COUNTERS_TTL');
+$config['REDIS_VIEW_TTL'] = env('REDIS_VIEW_TTL');
+$config['REDIS_RUNTIME_INFO_TTL'] = env('REDIS_RUNTIME_INFO_TTL');
+$config['REDIS_LABELS_TTL'] = env('REDIS_LABELS_TTL');
+$config['REDIS_INIT_PARAMS_TTL'] = env('REDIS_INIT_PARAMS_TTL');
+$config['REDIS_FEED_TREE_TTL'] = env('REDIS_FEED_TREE_TTL');
+$config['REDIS_FEED_ICONS_TTL'] = env('REDIS_FEED_ICONS_TTL');
+$config['REDIS_TRANSLATIONS_TTL'] = env('REDIS_TRANSLATIONS_TTL');
 
 // Wait for the db connection
 $i = 1;

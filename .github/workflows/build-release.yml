@@ -3,7 +3,13 @@ name: "[builder] CI for releases"
 on:
   repository_dispatch:
     types: build
-  workflow_dispatch: ~
+  workflow_dispatch:
+    inputs:
+      ignore-cache:
+        description: 'Ignore cache and force build (skip hash check)'
+        required: false
+        default: false
+        type: boolean
   schedule:
     - cron: "0 0 * * *"
   push:
@@ -56,7 +62,7 @@ jobs:
 
   build:
     needs: check
-    if: needs.check.outputs.cache-hit != 'true'
+    if: needs.check.outputs.cache-hit != 'true' || inputs.ignore-cache
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -68,21 +74,21 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+        uses: docker/setup-qemu-action@v4
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Dockerhub login
         if: github.event_name != 'pull_request'
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           username: ${{ vars.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Login to Container Registry
         if: github.event_name != 'pull_request'
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -90,7 +96,7 @@ jobs:
 
       - name: Set tag
         id: tag
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: |
             ${{ vars.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}
@@ -108,7 +114,7 @@ jobs:
           flavor: latest=false
 
       - name: Build dockerfile (with push)
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         id: push
         with:
           context: .

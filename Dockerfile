@@ -110,7 +110,7 @@ COPY src/s6/ /etc/s6/
 # Install dependencies
 RUN set -ex \
   && chmod -x /wait-for.sh && chmod -x /docker-entrypoint.sh \
-  && PHP_PACKAGES="fpm ctype curl dom exif fileinfo gd iconv intl json mbstring opcache \
+  && PHP_PACKAGES="fpm ctype curl dom exif fileinfo gd iconv intl json mbstring \
   openssl pcntl pdo pdo_pgsql pecl-apcu phar posix session simplexml sockets sodium tokenizer xml xmlwriter zip \
   gmp pecl-imagick redis" \
   && EXT_LIST="" \
